@@ -8,52 +8,62 @@ var config = {
 };
 
 firebase.initializeApp(config);
-
 var database = firebase.database();
+
+
+
+var name = "";
+var destination = "";
+var frequency = 0;
+var firstTrainTime = 0000;
+
+var rName = "";
+var rDestination = "";
+var rFrequency = 0;
+var rFirstTrainTime = 0000;
+
 
 
 $("#button").on("click", function (event) {
     event.preventDefault();
-    var name = $("#name").val().trim();
-    var destination = $("#destination").val().trim();
-    var firstTrainTime = $("#first-train").val().trim();
-    var frequency = $("#frequency").val().trim();
-
-    var firstTimeConverted = moment(firstTrainTime, "hh:mm").subtract(1, "years");
-    var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
-    var tRemainder = diffTime % frequency;
-    var minutesTillTrain = frequency - tRemainder;
-    var nextTrain = moment().add(minutesTillTrain, "minutes");
-    var nextTrainFormatted = moment(nextTrain).format("hh:mm");
-
-
-    console.log("Name: " + name);
-    console.log("Destination: " + destination);
-    console.log("First Train Time: " + firstTrainTime);
-    console.log("Frequency: " + frequency);
-    console.log("Next Train: " + nextTrainFormatted);
-    console.log("Minutes Away: " + minutesTillTrain);
-
+    name = $("#name").val().trim();
+    destination = $("#destination").val().trim();
+    firstTrainTime = $("#first-train").val().trim();
+    frequency = $("#frequency").val().trim();
 
     database.ref().push({
         name: name,
         destination: destination,
         firstTrainTime: firstTrainTime,
         frequency: frequency,
-        nextTrainFormatted: nextTrainFormatted,
-        minutesTillTrain: minutesTillTrain
     });
+    //clears input boxes
+    $("#name").val("");
+    $("#destination").val("");
+    $("#first-train").val("");
+    $("#frequency").val("");
+
 });
 
-database.ref().on("child_added", function (childSnapshot) {
-    var tRow = $("<tr>");
-    var name = $("<td>").text((childSnapshot.val().name));
-    var destination = $("<td>").text((childSnapshot.val().destination));
-    var frequency = $("<td>").text((childSnapshot.val().frequency));
-    var nextArrival = $("<td>").text((childSnapshot.val().nextTrainFormatted));
-    var minutesAway = $("<td>").text((childSnapshot.val().minutesTillTrain));
 
-    tRow.append(name, destination, frequency, nextArrival, minutesAway);
+
+database.ref().on("child_added", function (childSnapshot) {
+    rName = childSnapshot.val().name;
+    rDestination = childSnapshot.val().destination;
+    rFrequency = parseInt(childSnapshot.val().frequency);
+    rFirstTrainTime = childSnapshot.val().firstTrainTime;
+    var trainInfo = trainTime(rFrequency, rFirstTrainTime);
+
+
+    //add rows of data to table
+
+    var tRow = $("<tr>").append(
+        $("<td>").text(rName),
+        $("<td>").text(rDestination),
+        $("<td>").text(rFrequency),
+        $("<td>").text(trainInfo[0]),
+        $("<td>").text(trainInfo[1]),
+    );
     $("tbody").append(tRow);
 
 
@@ -61,3 +71,19 @@ database.ref().on("child_added", function (childSnapshot) {
     console.log("The read failed: " + errorObject.code);
 });
 
+
+
+function trainTime(frequency, firstTrainTime) {
+
+    var firstTimeConverted = moment(firstTrainTime, "hh:mm").subtract(1, "years");
+    var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+    var tRemainder = diffTime % frequency;
+    var minutesTillTrain = frequency - tRemainder;
+
+    var nextTrain = moment().add(minutesTillTrain, "minutes");
+    var nextTrainFormatted = moment(nextTrain).format("hh:mm");
+
+    console.log(nextTrainFormatted);
+    console.log(minutesTillTrain);
+    return [nextTrainFormatted, minutesTillTrain];
+};
